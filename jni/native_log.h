@@ -28,4 +28,11 @@ void setNativeDebugModeOn();
 void setNativeDebugModeOff();
 void nativeDebug(const char *fmt, ...);
 
+#define __TRACE_ON	0
+#if __TRACE_ON
+#define __TAG__	nativeDebug("%s:%d", __FILE__, __LINE__);
+#else
+#define __TAG__	/* do nothing */
+#endif
+
 #endif // _NATIVE_LOG_H
