@@ -1,4 +1,31 @@
+int attr bitmap 0x7f010005
+int attr hotSpotX 0x7f010006
+int attr hotSpotY 0x7f010007
+int attr pointerIconArrow 0x7f010001
+int attr pointerIconSpotAnchor 0x7f010004
+int attr pointerIconSpotHover 0x7f010002
+int attr pointerIconSpotTouch 0x7f010003
+int attr pointerStyle 0x7f010000
 int drawable ic_launcher 0x7f020000
+int drawable pointer_arrow 0x7f020001
+int drawable pointer_arrow_icon 0x7f020002
+int drawable pointer_spot_anchor 0x7f020003
+int drawable pointer_spot_anchor_icon 0x7f020004
+int drawable pointer_spot_hover 0x7f020005
+int drawable pointer_spot_hover_icon 0x7f020006
+int drawable pointer_spot_touch 0x7f020007
+int drawable pointer_spot_touch_icon 0x7f020008
 int string app_name 0x7f030000
 int style AppBaseTheme 0x7f040000
 int style AppTheme 0x7f040001
+int[] styleable Pointer { 0x7f010001, 0x7f010002, 0x7f010003, 0x7f010004 }
+int styleable Pointer_pointerIconArrow 0
+int styleable Pointer_pointerIconSpotAnchor 3
+int styleable Pointer_pointerIconSpotHover 1
+int styleable Pointer_pointerIconSpotTouch 2
+int[] styleable PointerIcon { 0x7f010005, 0x7f010006, 0x7f010007 }
+int styleable PointerIcon_bitmap 0
+int styleable PointerIcon_hotSpotX 1
+int styleable PointerIcon_hotSpotY 2
+int[] styleable Theme { 0x7f010000 }
+int styleable Theme_pointerStyle 0

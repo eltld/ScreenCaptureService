@@ -16,6 +16,7 @@ import android.os.RemoteException;
 import android.util.DisplayMetrics;
 import android.view.Display;
 import android.view.Surface;
+import android.view.WindowManager;
 
 public class ScreenCaptureService extends Service {
 	
@@ -26,8 +27,8 @@ public class ScreenCaptureService extends Service {
 	
 	private Context mContext;
 	
-	private DisplayMetrics mDisplayMetrics;
 	private Display mDisplay;
+	private DisplayMetrics mDisplayMetrics;
 	private Matrix mDisplayMatrix;
 	private Bitmap mScreenBitmap;
 
@@ -36,6 +37,12 @@ public class ScreenCaptureService extends Service {
 		sLogcat.d("entry");
 		
 		mContext = this; // TODO
+		
+		WindowManager manager = (WindowManager) mContext
+				.getSystemService(Context.WINDOW_SERVICE);
+		mDisplay = manager.getDefaultDisplay();
+		mDisplayMetrics = new DisplayMetrics();
+		mDisplayMatrix = new Matrix();
 		
 		super.onCreate();
 	}
@@ -48,13 +55,15 @@ public class ScreenCaptureService extends Service {
 
 	@Override
 	public IBinder onBind(Intent intent) {
-		return new Stub();
+		return new ScreenCaptureServiceImpl();
 	}
 
-	private class Stub extends IScreenCaptureService.Stub {
+	private class ScreenCaptureServiceImpl extends IScreenCaptureService.Stub {
 
 		@Override
 		public Bitmap takeScreenCapture() throws RemoteException {
+			sLogcat.d("prepare...");
+			
 			// Prepare to orient the screenshot correctly
 //			mDisplay.getRealMetrics(mDisplayMetrics); // requires API JELLY_BEAN_MR1 (level 17)
 	        mDisplay.getMetrics(mDisplayMetrics);
@@ -69,6 +78,8 @@ public class ScreenCaptureService extends Service {
 	            dims[0] = Math.abs(dims[0]);
 	            dims[1] = Math.abs(dims[1]);
 	        }
+	        
+	        sLogcat.d("prepare ok, screencap...");
 
 	        // Take the screenshot
 	        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
@@ -97,6 +108,8 @@ public class ScreenCaptureService extends Service {
 				mScreenBitmap = nativeTakeScreenCapture();
 			}
 	        
+	        sLogcat.d("screencap ", ((mScreenBitmap == null) ? "failed" : "ok"), ", rotate...");
+	        
 			if (mScreenBitmap != null) {
 				if (requiresRotation) {
 					// Rotate the screenshot to the current orientation
@@ -113,6 +126,8 @@ public class ScreenCaptureService extends Service {
 					mScreenBitmap = ss;
 				}
 			}
+			
+			sLogcat.d("everything ok, done.");
 	        
 			return mScreenBitmap;
 		}
