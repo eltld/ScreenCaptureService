@@ -1,8 +1,15 @@
 package me.wtao.service;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.sql.Date;
+import java.text.SimpleDateFormat;
+import java.util.Locale;
 
+import me.wtao.io.ExternalStorage;
+import me.wtao.lang.reflect.Reflect;
 import me.wtao.utils.Logcat;
 import android.app.Service;
 import android.content.Context;
@@ -14,6 +21,7 @@ import android.os.Build;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.Display;
 import android.view.Surface;
 import android.view.WindowManager;
@@ -22,7 +30,7 @@ public class ScreenCaptureService extends Service {
 	
 	private static final Logcat sLogcat = new Logcat();
 	static {
-		sLogcat.setOn(); // debug mode enable
+		sLogcat.setOff();
 	}
 	
 	private Context mContext;
@@ -34,9 +42,11 @@ public class ScreenCaptureService extends Service {
 
 	@Override
 	public void onCreate() {
-		sLogcat.d("entry");
+		Log.d(sLogcat.getTag(), "entry, debug mode "
+				+ (sLogcat.isDebuggable() ? "on" : "off")
+				+ ", setOn() to see more info, good luck");
 		
-		mContext = this; // TODO
+		mContext = this;
 		
 		WindowManager manager = (WindowManager) mContext
 				.getSystemService(Context.WINDOW_SERVICE);
@@ -86,8 +96,14 @@ public class ScreenCaptureService extends Service {
 	        	Exception exception = null;
 				try {
 					Class<?> CLASS_Surface = Class.forName("android.view.Surface");
-					Class<?> paramTypes[] = {Integer.class, Integer.class};
+					
+					if (sLogcat.isDebuggable()) {
+						Reflect.log(CLASS_Surface);
+					}
+					
+					Class<?>[] paramTypes = {int.class, int.class};
 		        	Method METHOD_screenshot = CLASS_Surface.getMethod("screenshot", paramTypes);
+		        	// it's not null, but bad bitmap :( we need android.permission.READ_FRAME_BUFFER
 		        	mScreenBitmap = (Bitmap) METHOD_screenshot.invoke(null, (int) dims[0], (int) dims[1]);
 				} catch (ClassNotFoundException e) {
 					exception = e;
@@ -101,7 +117,7 @@ public class ScreenCaptureService extends Service {
 					exception = e;
 				}
 				if(exception != null) {
-					exception.printStackTrace();
+					sLogcat.e(exception);
 					mScreenBitmap = null;
 				}
 			} else {
@@ -128,6 +144,9 @@ public class ScreenCaptureService extends Service {
 			}
 			
 			sLogcat.d("everything ok, done.");
+			if(sLogcat.isDebuggable()) {
+				dumpToSDCard();
+			}
 	        
 			return mScreenBitmap;
 		}
@@ -144,6 +163,35 @@ public class ScreenCaptureService extends Service {
 			return 360f - 270f;
 		}
 		return 0f;
+	}
+	
+	/**
+	 * if {@link Logcat#isDebuggable()}, dump bitmap to sdcard for testing
+	 */
+	private void dumpToSDCard() {
+		if(!ExternalStorage.isExternalStorageWritable()) {
+			return;
+		}
+		
+		try {
+			File dir = ExternalStorage.getExternalStorageDirectory("screencap");
+			sLogcat.d(dir.getAbsolutePath());
+			
+			StringBuilder sb = new StringBuilder();
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HH_mm_ss", Locale.CHINA);
+			Date currentDate = new Date(System.currentTimeMillis());
+			sb.append(sdf.format(currentDate));
+			sb.append(".png");
+			String filename = sb.toString();
+			sLogcat.d(filename);
+			
+			FileOutputStream out = new FileOutputStream(new File(dir, filename));
+			// PNG which is lossless, will ignore the quality setting 85
+			mScreenBitmap.compress(Bitmap.CompressFormat.PNG, 85, out);
+			out.close();
+		} catch (Exception e) {
+			sLogcat.w(e);
+		}
 	}
 
 	private native Bitmap nativeTakeScreenCapture();
