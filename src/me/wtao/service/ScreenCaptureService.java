@@ -2,7 +2,6 @@ package me.wtao.service;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.Date;
 import java.text.SimpleDateFormat;
@@ -93,7 +92,6 @@ public class ScreenCaptureService extends Service {
 
 	        // Take the screenshot
 	        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-	        	Exception exception = null;
 				try {
 					Class<?> CLASS_Surface = Class.forName("android.view.Surface");
 					
@@ -105,19 +103,8 @@ public class ScreenCaptureService extends Service {
 		        	Method METHOD_screenshot = CLASS_Surface.getMethod("screenshot", paramTypes);
 		        	// it's not null, but bad bitmap :( we need android.permission.READ_FRAME_BUFFER
 		        	mScreenBitmap = (Bitmap) METHOD_screenshot.invoke(null, (int) dims[0], (int) dims[1]);
-				} catch (ClassNotFoundException e) {
-					exception = e;
-				} catch (NoSuchMethodException e) {
-					exception = e;
-				} catch (IllegalAccessException e) {
-					exception = e;
-				} catch (IllegalArgumentException e) {
-					exception = e;
-				} catch (InvocationTargetException e) {
-					exception = e;
-				}
-				if(exception != null) {
-					sLogcat.e(exception);
+				} catch (Exception e) {
+					sLogcat.e(e);
 					mScreenBitmap = null;
 				}
 			} else {
