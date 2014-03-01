@@ -29,7 +29,7 @@ public class ScreenCaptureService extends Service {
 	
 	private static final Logcat sLogcat = new Logcat();
 	static {
-		sLogcat.setOff();
+		sLogcat.setOn();
 	}
 	
 	private Context mContext;
