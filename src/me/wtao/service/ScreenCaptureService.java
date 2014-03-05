@@ -10,6 +10,8 @@ import java.util.Locale;
 import me.wtao.io.ExternalStorage;
 import me.wtao.lang.reflect.Reflect;
 import me.wtao.utils.Logcat;
+import me.wtao.utils.TouchDeviceParser;
+import android.annotation.SuppressLint;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -27,9 +29,11 @@ import android.view.WindowManager;
 
 public class ScreenCaptureService extends Service {
 	
+	private static final TouchDeviceParser sTouchDevice = TouchDeviceParser.getTouchDeviceParser();
+	
 	private static final Logcat sLogcat = new Logcat();
 	static {
-		sLogcat.setOn();
+		sLogcat.setOff();
 	}
 	
 	private Context mContext;
@@ -67,6 +71,7 @@ public class ScreenCaptureService extends Service {
 		return new ScreenCaptureServiceImpl();
 	}
 
+	@SuppressLint("NewApi")
 	private class ScreenCaptureServiceImpl extends IScreenCaptureService.Stub {
 
 		@Override
@@ -74,9 +79,18 @@ public class ScreenCaptureService extends Service {
 			sLogcat.d("prepare...");
 			
 			// Prepare to orient the screenshot correctly
-//			mDisplay.getRealMetrics(mDisplayMetrics); // requires API JELLY_BEAN_MR1 (level 17)
-	        mDisplay.getMetrics(mDisplayMetrics);
-	        float[] dims = {mDisplayMetrics.widthPixels, mDisplayMetrics.heightPixels};
+			int widthPixels;
+			int heightPixels;
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+				mDisplay.getRealMetrics(mDisplayMetrics);
+				widthPixels = mDisplayMetrics.widthPixels;
+				heightPixels = mDisplayMetrics.heightPixels;
+			} else {
+				widthPixels = (int) sTouchDevice.getDisplayWidth();
+				heightPixels = (int) sTouchDevice.getDisplayHeight();
+			}
+			
+			float[] dims = {widthPixels, heightPixels};
 	        float degrees = getDegreesForRotation(mDisplay.getRotation());
 	        boolean requiresRotation = (degrees > 0);
 	        if (requiresRotation) {
@@ -108,17 +122,19 @@ public class ScreenCaptureService extends Service {
 					mScreenBitmap = null;
 				}
 			} else {
-				mScreenBitmap = nativeTakeScreenCapture();
+//				mScreenBitmap = nativeTakeScreenCapture(); // TODO:
 			}
 	        
 	        sLogcat.d("screencap ", ((mScreenBitmap == null) ? "failed" : "ok"), ", rotate...");
 	        
 			if (mScreenBitmap != null) {
+				sLogcat.d("bitmap size: ", mScreenBitmap.getWidth(), "x",
+						mScreenBitmap.getHeight(), " px.");
+				
 				if (requiresRotation) {
 					// Rotate the screenshot to the current orientation
 					Bitmap ss = Bitmap.createBitmap(
-							mDisplayMetrics.widthPixels,
-							mDisplayMetrics.heightPixels,
+							widthPixels, heightPixels,
 							Bitmap.Config.ARGB_8888);
 					Canvas c = new Canvas(ss);
 					c.translate(ss.getWidth() / 2, ss.getHeight() / 2);
@@ -131,6 +147,7 @@ public class ScreenCaptureService extends Service {
 			}
 			
 			sLogcat.d("everything ok, done.");
+			
 			if(sLogcat.isDebuggable()) {
 				dumpToSDCard();
 			}
@@ -181,10 +198,10 @@ public class ScreenCaptureService extends Service {
 		}
 	}
 
-	private native Bitmap nativeTakeScreenCapture();
-
-	static {
-		System.loadLibrary("screencap");
-	}
+//	private native Bitmap nativeTakeScreenCapture();
+//
+//	static {
+//		System.loadLibrary("screencap");
+//	}
 
 }
