@@ -11,7 +11,7 @@ import me.wtao.io.ExternalStorage;
 import me.wtao.lang.reflect.Reflect;
 import me.wtao.utils.Logcat;
 import me.wtao.utils.TouchDeviceParser;
-import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -30,11 +30,11 @@ import android.view.WindowManager;
 public class ScreenCaptureService extends Service {
 	
 	private static final TouchDeviceParser sTouchDevice = TouchDeviceParser.getTouchDeviceParser();
-	
 	private static final Logcat sLogcat = new Logcat();
 	static {
-		sLogcat.setOff();
+		sLogcat.setOn();
 	}
+	private static Boolean sDumpScreenCap = false;
 	
 	private Context mContext;
 	
@@ -71,12 +71,15 @@ public class ScreenCaptureService extends Service {
 		return new ScreenCaptureServiceImpl();
 	}
 
-	@SuppressLint("NewApi")
 	private class ScreenCaptureServiceImpl extends IScreenCaptureService.Stub {
-
+		
+		private long mCurMillis;
+		
+		@TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
 		@Override
 		public Bitmap takeScreenCapture() throws RemoteException {
 			sLogcat.d("prepare...");
+			startMillis();
 			
 			// Prepare to orient the screenshot correctly
 			int widthPixels;
@@ -104,7 +107,13 @@ public class ScreenCaptureService extends Service {
 	        
 	        sLogcat.d("prepare ok, screencap...");
 
-	        // Take the screenshot
+	        // Free last screenshot
+			if (mScreenBitmap != null) {
+				mScreenBitmap.recycle();
+				mScreenBitmap = null;
+			}
+			
+			// Take the screenshot
 	        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
 				try {
 					Class<?> CLASS_Surface = Class.forName("android.view.Surface");
@@ -146,13 +155,37 @@ public class ScreenCaptureService extends Service {
 				}
 			}
 			
+			logCostMillis();
 			sLogcat.d("everything ok, done.");
 			
-			if(sLogcat.isDebuggable()) {
+			if(sDumpScreenCap) {
 				dumpToSDCard();
 			}
 	        
 			return mScreenBitmap;
+		}
+
+		@Override
+		public void setDebuggable(boolean enable) throws RemoteException {
+			if(enable) {
+				sLogcat.setOn();
+			} else {
+				sLogcat.setOff();
+			}
+			sDumpScreenCap = enable;			
+		}
+		
+		private void startMillis() {
+			mCurMillis = System.currentTimeMillis();
+		}
+		
+		private void logCostMillis() {
+			long diff = System.currentTimeMillis() - mCurMillis;
+
+			SimpleDateFormat sdf = new SimpleDateFormat("mm:ss.SSS",
+					Locale.CHINA);
+			Date cost = new Date(diff);
+			sLogcat.d(sdf.format(cost));
 		}
 
 	}
@@ -170,7 +203,10 @@ public class ScreenCaptureService extends Service {
 	}
 	
 	/**
-	 * if {@link Logcat#isDebuggable()}, dump bitmap to sdcard for testing
+	 * if {@link ScreenCaptureServiceImpl#setDebuggable} enable, dump bitmap to
+	 * sdcard for testing.
+	 * 
+	 * @see #sDumpScreenCap
 	 */
 	private void dumpToSDCard() {
 		if(!ExternalStorage.isExternalStorageWritable()) {
