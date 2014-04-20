@@ -9,7 +9,7 @@ import java.util.Locale;
 
 import me.wtao.io.ExternalStorage;
 import me.wtao.lang.reflect.Reflect;
-import me.wtao.utils.Logcat;
+import me.wtao.utils.Log;
 import me.wtao.utils.TouchDeviceParser;
 import android.annotation.TargetApi;
 import android.app.Service;
@@ -22,7 +22,6 @@ import android.os.Build;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.Display;
 import android.view.Surface;
 import android.view.WindowManager;
@@ -30,9 +29,9 @@ import android.view.WindowManager;
 public class ScreenCaptureService extends Service {
 	
 	private static final TouchDeviceParser sTouchDevice = TouchDeviceParser.getTouchDeviceParser();
-	private static final Logcat sLogcat = new Logcat();
+	private static final Log Log = new Log();
 	static {
-		sLogcat.setOn();
+		Log.setOn();
 	}
 	private static Boolean sDumpScreenCap = false;
 	
@@ -45,8 +44,8 @@ public class ScreenCaptureService extends Service {
 
 	@Override
 	public void onCreate() {
-		Log.d(sLogcat.getTag(), "entry, debug mode "
-				+ (sLogcat.isDebuggable() ? "on" : "off")
+		android.util.Log.d(Log.getTag(), "entry, debug mode "
+				+ (Log.isDebuggable() ? "on" : "off")
 				+ ", setOn() to see more info, good luck");
 		
 		mContext = this;
@@ -63,7 +62,7 @@ public class ScreenCaptureService extends Service {
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
-		sLogcat.d("exit");
+		Log.debug("exit");
 	}
 
 	@Override
@@ -78,7 +77,7 @@ public class ScreenCaptureService extends Service {
 		@TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
 		@Override
 		public Bitmap takeScreenCapture() throws RemoteException {
-			sLogcat.d("prepare...");
+			Log.debug("prepare...");
 			startMillis();
 			
 			// Prepare to orient the screenshot correctly
@@ -105,7 +104,7 @@ public class ScreenCaptureService extends Service {
 	            dims[1] = Math.abs(dims[1]);
 	        }
 	        
-	        sLogcat.d("prepare ok, screencap...");
+	        Log.debug("prepare ok, screencap...");
 
 	        // Free last screenshot
 			if (mScreenBitmap != null) {
@@ -118,7 +117,7 @@ public class ScreenCaptureService extends Service {
 				try {
 					Class<?> CLASS_Surface = Class.forName("android.view.Surface");
 					
-					if (sLogcat.isDebuggable()) {
+					if (Log.isDebuggable()) {
 						Reflect.log(CLASS_Surface);
 					}
 					
@@ -127,17 +126,17 @@ public class ScreenCaptureService extends Service {
 		        	// it's not null, but bad bitmap :( we need android.permission.READ_FRAME_BUFFER
 		        	mScreenBitmap = (Bitmap) METHOD_screenshot.invoke(null, (int) dims[0], (int) dims[1]);
 				} catch (Exception e) {
-					sLogcat.e(e);
+					Log.error(e);
 					mScreenBitmap = null;
 				}
 			} else {
 //				mScreenBitmap = nativeTakeScreenCapture(); // TODO:
 			}
 	        
-	        sLogcat.d("screencap ", ((mScreenBitmap == null) ? "failed" : "ok"), ", rotate...");
+	        Log.debug("screencap ", ((mScreenBitmap == null) ? "failed" : "ok"), ", rotate...");
 	        
 			if (mScreenBitmap != null) {
-				sLogcat.d("bitmap size: ", mScreenBitmap.getWidth(), "x",
+				Log.debug("bitmap size: ", mScreenBitmap.getWidth(), "x",
 						mScreenBitmap.getHeight(), " px.");
 				
 				if (requiresRotation) {
@@ -156,7 +155,7 @@ public class ScreenCaptureService extends Service {
 			}
 			
 			logCostMillis();
-			sLogcat.d("everything ok, done.");
+			Log.debug("everything ok, done.");
 			
 			if(sDumpScreenCap) {
 				dumpToSDCard();
@@ -168,9 +167,9 @@ public class ScreenCaptureService extends Service {
 		@Override
 		public void setDebuggable(boolean enable) throws RemoteException {
 			if(enable) {
-				sLogcat.setOn();
+				Log.setOn();
 			} else {
-				sLogcat.setOff();
+				Log.setOff();
 			}
 			sDumpScreenCap = enable;			
 		}
@@ -185,7 +184,7 @@ public class ScreenCaptureService extends Service {
 			SimpleDateFormat sdf = new SimpleDateFormat("mm:ss.SSS",
 					Locale.CHINA);
 			Date cost = new Date(diff);
-			sLogcat.d(sdf.format(cost));
+			Log.debug(sdf.format(cost));
 		}
 
 	}
@@ -215,7 +214,7 @@ public class ScreenCaptureService extends Service {
 		
 		try {
 			File dir = ExternalStorage.getExternalStorageDirectory("screencap");
-			sLogcat.d(dir.getAbsolutePath());
+			Log.debug(dir.getAbsolutePath());
 			
 			StringBuilder sb = new StringBuilder();
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HH_mm_ss", Locale.CHINA);
@@ -223,14 +222,14 @@ public class ScreenCaptureService extends Service {
 			sb.append(sdf.format(currentDate));
 			sb.append(".png");
 			String filename = sb.toString();
-			sLogcat.d(filename);
+			Log.debug(filename);
 			
 			FileOutputStream out = new FileOutputStream(new File(dir, filename));
 			// PNG which is lossless, will ignore the quality setting 85
 			mScreenBitmap.compress(Bitmap.CompressFormat.PNG, 85, out);
 			out.close();
 		} catch (Exception e) {
-			sLogcat.w(e);
+			Log.warn(e);
 		}
 	}
 
